@@ -1,0 +1,8 @@
+{
+  "name": "photo-share",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@netlify/neon": "^0.1.0"
+  }
+}

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ShareSnap</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#0a0a0f; --bg2:#12121a; --bg3:#1a1a28;
+  --glass:rgba(255,255,255,0.04); --glass2:rgba(255,255,255,0.07);
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.15);
+  --purple:#a855f7; --purple2:#7c3aed; --pink:#ec4899;
+  --green:#22c55e; --blue:#3b82f6; --red:#ef4444;
+  --text:#f1f5f9; --text2:#94a3b8; --text3:#475569;
+  --r:14px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Cairo',sans-serif;min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+.amb{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.blob{position:absolute;border-radius:50%;filter:blur(110px);opacity:.18;animation:drift 18s ease-in-out infinite alternate;}
+.blob.a{width:550px;height:550px;background:radial-gradient(circle,#a855f7,transparent 70%);top:-150px;right:-100px;}
+.blob.b{width:450px;height:450px;background:radial-gradient(circle,#ec489920,transparent 70%);bottom:-100px;left:-100px;animation-delay:-9s;}
+.blob.c{width:300px;height:300px;background:radial-gradient(circle,#3b82f615,transparent 70%);top:50%;left:45%;animation-delay:-4s;}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(28px,18px)}}
+
+.page{position:relative;z-index:1;display:none;}
+.page.active{display:block;}
+#friendPage.active,#uploadPage.active{display:flex;}
+
+.app{max-width:880px;margin:0 auto;padding:0 18px 60px;}
+
+/* ── HEADER ── */
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:26px 0 22px;border-bottom:1px solid var(--border);margin-bottom:32px;}
+.brand{display:flex;align-items:center;gap:13px;}
+.brand-ico{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,#a855f7,#ec4899);display:flex;align-items:center;justify-content:center;box-shadow:0 0 28px rgba(168,85,247,.3);animation:glow 4s ease-in-out infinite;flex-shrink:0;}
+@keyframes glow{0%,100%{box-shadow:0 0 28px rgba(168,85,247,.28)}50%{box-shadow:0 0 46px rgba(168,85,247,.5)}}
+.brand-ico svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:2;}
+.brand-name{font-size:21px;font-weight:900;}
+.brand-name em{color:var(--purple);font-style:normal;}
+.brand-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);margin-top:1px;}
+
+/* ── LINK BOX ── */
+.link-box{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:22px;margin-bottom:26px;position:relative;overflow:hidden;}
+.link-box::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(168,85,247,.04),rgba(236,72,153,.03));pointer-events:none;}
+.lb-title{font-size:15px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:7px;}
+.lb-title svg{width:15px;height:15px;stroke:var(--purple);fill:none;stroke-width:2;}
+.lb-sub{font-size:13px;color:var(--text2);margin-bottom:14px;}
+.lb-row{display:flex;gap:8px;align-items:stretch;}
+.lb-url{flex:1;background:rgba(0,0,0,.35);border:1px solid var(--border2);border-radius:10px;padding:11px 14px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--purple);direction:ltr;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;user-select:all;}
+.btn-copy{padding:0 20px;border-radius:10px;border:none;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:'Cairo',sans-serif;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .2s;display:flex;align-items:center;gap:6px;box-shadow:0 4px 16px rgba(168,85,247,.35);min-height:44px;}
+.btn-copy:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(168,85,247,.45);}
+.btn-copy.ok{background:linear-gradient(135deg,#22c55e,#16a34a);}
+.btn-copy svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5;}
+.manual-copy{margin-top:10px;display:none;}
+.manual-copy input{width:100%;background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.3);color:var(--purple);font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 12px;border-radius:8px;direction:ltr;outline:none;}
+.manual-copy p{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);margin-top:4px;}
+.lb-token{margin-top:10px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;}
+.token-pill{background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.2);color:var(--purple);padding:2px 8px;border-radius:6px;font-size:10px;}
+
+/* ── STATS ── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:26px;}
+.st{background:var(--glass);border:1px solid var(--border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;}
+.st::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;}
+.st.sp::after{background:linear-gradient(90deg,#a855f7,#ec4899);}
+.st.sb::after{background:var(--blue);}
+.st.sg::after{background:var(--green);}
+.st-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:7px;}
+.st-val{font-size:26px;font-weight:900;line-height:1;}
+.st-val.vp{background:linear-gradient(135deg,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.st-val.vb{color:var(--blue);}
+.st-val.vg{color:var(--green);}
+
+/* ── SECTION HEAD ── */
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.sh-title{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:2px;}
+.ftabs{display:flex;gap:5px;}
+.ft{padding:5px 11px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:'Cairo',sans-serif;font-size:12px;cursor:pointer;transition:all .18s;}
+.ft.on,.ft:hover{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.3);color:var(--purple);}
+
+/* ── PHOTO GRID ── */
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px;}
+.pc{background:var(--glass);border:1px solid var(--border);border-radius:12px;overflow:hidden;cursor:pointer;transition:all .25s;animation:ci .35s ease both;position:relative;}
+.pc:hover{border-color:rgba(168,85,247,.35);transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.45);}
+@keyframes ci{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.pc img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--bg2);}
+.pc-badge{position:absolute;top:7px;right:7px;background:rgba(10,10,15,.85);backdrop-filter:blur(8px);border:1px solid var(--border2);border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text2);padding:2px 6px;}
+.pc-new{position:absolute;top:7px;left:7px;background:linear-gradient(135deg,#a855f7,#ec4899);border-radius:5px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#fff;padding:2px 6px;}
+.pc-info{padding:9px 11px;}
+.pc-name{font-size:13px;font-weight:700;margin-bottom:1px;}
+.pc-time{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);}
+.pc-cap{font-size:11px;color:var(--text2);margin-top:3px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ── LOADING ── */
+.loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:48px;color:var(--text3);font-family:'IBM Plex Mono',monospace;font-size:13px;grid-column:1/-1;}
+.spin{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spinner .7s linear infinite;}
+@keyframes spinner{to{transform:rotate(360deg)}}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:56px 20px;grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.empty-ico{font-size:50px;opacity:.2;filter:grayscale(1);}
+.empty-t{font-size:16px;font-weight:700;color:var(--text2);}
+.empty-s{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);line-height:1.7;}
+
+/* ── LIGHTBOX ── */
+.lb{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.93);backdrop-filter:blur(14px);display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.lb.open{display:flex;animation:lbi .22s ease;}
+@keyframes lbi{from{opacity:0}to{opacity:1}}
+.lb img{max-width:90vw;max-height:72vh;border-radius:12px;object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,.7);}
+.lb-info{text-align:center;}
+.lb-name{font-size:15px;font-weight:700;}
+.lb-t{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2);margin-top:3px;}
+.lb-cap{font-size:13px;color:var(--text2);margin-top:5px;font-style:italic;}
+.lb-x{position:fixed;top:18px;left:18px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid var(--border2);color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;}
+.lb-x:hover{background:rgba(255,255,255,.2);}
+
+/* ── CONSENT PAGE ── */
+#friendPage{min-height:100vh;align-items:center;justify-content:center;padding:20px;}
+.cc{width:100%;max-width:460px;background:var(--glass);border:1px solid var(--border);border-radius:20px;overflow:hidden;position:relative;}
+.cc::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#a855f7,#ec4899,#3b82f6);}
+.cc-hd{padding:30px 26px 22px;text-align:center;border-bottom:1px solid var(--border);}
+.cc-av{width:68px;height:68px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#ec4899);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:26px;box-shadow:0 8px 24px rgba(168,85,247,.3);}
+.cc-title{font-size:19px;font-weight:900;margin-bottom:5px;}
+.cc-sub{font-size:13px;color:var(--text2);}
+.cc-body{padding:22px 26px;}
+.cc-desc{font-size:13px;color:var(--text2);line-height:1.8;background:rgba(168,85,247,.04);border:1px solid rgba(168,85,247,.1);border-radius:11px;padding:14px;margin-bottom:18px;}
+.cc-desc strong{color:var(--text);font-weight:700;}
+.perms{display:flex;flex-direction:column;gap:7px;margin-bottom:22px;}
+.perm{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text2);background:var(--glass);border:1px solid var(--border);border-radius:9px;padding:9px 12px;}
+.perm-ico{font-size:15px;flex-shrink:0;}
+.perm-chk{width:20px;height:20px;border-radius:50%;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.3);display:flex;align-items:center;justify-content:center;margin-right:auto;flex-shrink:0;}
+.perm-chk svg{width:10px;height:10px;stroke:var(--green);stroke-width:3;}
+.btn-agree{width:100%;height:50px;border-radius:12px;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;border:none;font-family:'Cairo',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 6px 20px rgba(168,85,247,.35);display:flex;align-items:center;justify-content:center;gap:7px;}
+.btn-agree:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(168,85,247,.45);}
+.btn-agree svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:2.5;}
+.btn-no{width:100%;margin-top:8px;height:42px;border-radius:11px;background:transparent;color:var(--text3);border:1px solid var(--border);font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;transition:all .2s;}
+.btn-no:hover{color:var(--red);border-color:rgba(239,68,68,.25);}
+
+/* ── UPLOAD PAGE ── */
+#uploadPage{min-height:100vh;align-items:flex-start;justify-content:center;padding:36px 18px;}
+.up-inner{width:100%;max-width:500px;}
+.up-hd{text-align:center;margin-bottom:28px;}
+.chk-c{width:60px;height:60px;border-radius:50%;background:rgba(34,197,94,.1);border:2px solid rgba(34,197,94,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;animation:pop .4s cubic-bezier(.34,1.56,.64,1);}
+@keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.chk-c svg{width:26px;height:26px;stroke:var(--green);stroke-width:2.5;}
+.up-title{font-size:21px;font-weight:900;margin-bottom:5px;}
+.up-sub{font-size:13px;color:var(--text2);}
+.cam-tabs{display:flex;gap:8px;margin-bottom:14px;}
+.ctab{flex:1;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--glass);color:var(--text2);font-family:'Cairo',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.ctab.on{background:rgba(168,85,247,.12);border-color:rgba(168,85,247,.35);color:var(--purple);}
+.ctab svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;}
+.dz{border:2px dashed rgba(168,85,247,.3);border-radius:14px;padding:36px 20px;text-align:center;background:rgba(168,85,247,.03);transition:all .2s;cursor:pointer;position:relative;margin-bottom:12px;}
+.dz.over,.dz:hover{border-color:rgba(168,85,247,.5);background:rgba(168,85,247,.06);}
+.dz input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.dz-ico{font-size:44px;margin-bottom:10px;opacity:.4;}
+.dz-t{font-size:15px;font-weight:700;margin-bottom:3px;}
+.dz-s{font-size:12px;color:var(--text3);}
+#cameraArea{display:none;}
+.cam-preview-wrap{border-radius:14px;overflow:hidden;background:#000;margin-bottom:10px;}
+#camVid{width:100%;border-radius:12px;display:block;}
+.cam-btns{display:flex;gap:8px;}
+.cam-snap{flex:1;height:48px;border-radius:11px;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;border:none;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .2s;}
+.cam-snap svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:2;}
+.cam-stop{padding:0 16px;height:48px;border-radius:11px;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:var(--red);font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;}
+.prev-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px;}
+.pi{position:relative;border-radius:9px;overflow:hidden;aspect-ratio:1;background:var(--bg2);border:1px solid var(--border);animation:ci .3s ease;}
+.pi img{width:100%;height:100%;object-fit:cover;display:block;}
+.pi-rm{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.pi-n{position:absolute;bottom:3px;left:3px;background:rgba(0,0,0,.7);border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:8px;color:rgba(255,255,255,.8);padding:1px 4px;}
+.cap-lbl{font-size:13px;color:var(--text2);margin-bottom:5px;display:block;}
+.name-lbl{font-size:13px;color:var(--text2);margin-bottom:5px;display:block;margin-top:12px;}
+input[type=text]{width:100%;background:var(--glass);border:1px solid var(--border);color:var(--text);font-family:'Cairo',sans-serif;font-size:14px;padding:11px 13px;border-radius:10px;outline:none;transition:border-color .2s;margin-bottom:10px;direction:rtl;}
+input[type=text]:focus{border-color:rgba(168,85,247,.4);}
+input[type=text]::placeholder{color:var(--text3);}
+textarea{width:100%;background:var(--glass);border:1px solid var(--border);color:var(--text);font-family:'Cairo',sans-serif;font-size:13px;padding:11px 13px;border-radius:10px;outline:none;resize:none;height:72px;transition:border-color .2s;margin-bottom:12px;}
+textarea:focus{border-color:rgba(168,85,247,.4);}
+textarea::placeholder{color:var(--text3);}
+.prog{display:none;margin-bottom:12px;}
+.prog-bg{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,#a855f7,#ec4899);border-radius:2px;width:0%;transition:width .25s;}
+.prog-txt{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);margin-top:5px;text-align:center;}
+.btn-send{width:100%;height:50px;border-radius:12px;background:linear-gradient(135deg,#a855f7,#ec4899);color:#fff;border:none;font-family:'Cairo',sans-serif;font-size:16px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 6px 20px rgba(168,85,247,.3);display:flex;align-items:center;justify-content:center;gap:7px;}
+.btn-send:hover:not(:disabled){transform:translateY(-2px);}
+.btn-send:disabled{opacity:.4;cursor:not-allowed;}
+.btn-send svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:2.5;}
+.success{display:none;text-align:center;padding:36px 0;}
+.big-chk{font-size:60px;animation:pop .5s cubic-bezier(.34,1.56,.64,1);}
+.suc-t{font-size:20px;font-weight:900;margin:12px 0 5px;}
+.suc-s{font-size:13px;color:var(--text2);}
+.btn-more{margin-top:18px;background:var(--glass);border:1px solid var(--border);color:var(--text2);padding:10px 22px;border-radius:10px;font-family:'Cairo',sans-serif;font-size:13px;cursor:pointer;}
+
+/* misc */
+.btn-del{background:transparent;border:1px solid var(--border);color:var(--text3);padding:7px 12px;border-radius:8px;font-family:'Cairo',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;}
+.btn-del:hover{border-color:rgba(239,68,68,.3);color:var(--red);}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border2);color:var(--text);padding:11px 20px;border-radius:11px;font-family:'IBM Plex Mono',monospace;font-size:12px;z-index:9999;pointer-events:none;display:none;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.5);animation:ti .3s ease;}
+@keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="amb"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div></div>
+
+<!-- ════ DASHBOARD ════ -->
+<div id="dashPage" class="page">
+<div class="app">
+  <div class="hdr">
+    <div class="brand">
+      <div class="brand-ico">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">Share<em>Snap</em></div>
+        <div class="brand-tag">مشاركة الصور بالموافقة</div>
+      </div>
+    </div>
+    <button class="btn-del" onclick="clearAll()">🗑 مسح الكل</button>
+  </div>
+
+  <div class="link-box">
+    <div class="lb-title">
+      <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+      لينك الموافقة — ابعته لصاحبك
+    </div>
+    <div class="lb-sub">لما يفتحه ويوافق، صوره بتوصلك على طول من أي جهاز</div>
+    <div class="lb-row">
+      <div class="lb-url" id="lbUrl" onclick="copyLink()">جاري...</div>
+      <button class="btn-copy" id="copyBtn" onclick="copyLink()">
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        <span id="copyTxt">نسخ اللينك</span>
+      </button>
+    </div>
+    <div class="manual-copy" id="manualCopy">
+      <input id="manualUrl" type="text" readonly onclick="this.select()">
+      <p>← اضغط على الخانة لتحديدها، ثم انسخها يدوياً (Ctrl+C أو طويل على الموبايل)</p>
+    </div>
+    <div class="lb-token">رمزك: <span class="token-pill" id="tokenPill">—</span></div>
+  </div>
+
+  <div class="stats">
+    <div class="st sp"><div class="st-lbl">إجمالي الصور</div><div class="st-val vp" id="stP">0</div></div>
+    <div class="st sb"><div class="st-lbl">أصدقاء شاركوا</div><div class="st-val vb" id="stF">0</div></div>
+    <div class="st sg"><div class="st-lbl">اليوم</div><div class="st-val vg" id="stT">0</div></div>
+  </div>
+
+  <div class="sh">
+    <div class="sh-title">الصور المستلمة</div>
+    <div class="ftabs">
+      <button class="ft on" onclick="setFilter('all',this)">الكل</button>
+      <button class="ft" onclick="setFilter('today',this)">اليوم</button>
+      <button class="ft" onclick="setFilter('new',this)">جديد</button>
+    </div>
+  </div>
+  <div class="pgrid" id="pgrid">
+    <div class="loading"><div class="spin"></div>جاري التحميل...</div>
+  </div>
+</div>
+</div>
+
+<!-- ════ CONSENT ════ -->
+<div id="friendPage" class="page">
+  <div class="cc">
+    <div class="cc-hd">
+      <div class="cc-av">📸</div>
+      <div class="cc-title">طلب مشاركة صور</div>
+      <div class="cc-sub">صاحبك عايز تشاركه صورك</div>
+    </div>
+    <div class="cc-body">
+      <div class="cc-desc">لو وافقت، هتقدر <strong>ترفع صور أو تلتقط صور بالكاميرا</strong> من تليفونك وهتوصل لصاحبك على طول.</div>
+      <div class="perms">
+        <div class="perm"><span class="perm-ico">🖼️</span><span>رفع صور من الاستوديو</span><div class="perm-chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+        <div class="perm"><span class="perm-ico">📷</span><span>التقاط صور بالكاميرا مباشرة</span><div class="perm-chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+        <div class="perm"><span class="perm-ico">🔒</span><span>لا وصول لأي شيء بدون إذنك</span><div class="perm-chk"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div></div>
+      </div>
+      <button class="btn-agree" onclick="agree()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        أوافق وأرفع صور
+      </button>
+      <button class="btn-no" onclick="decline()">لا، مش عايز</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ UPLOAD ════ -->
+<div id="uploadPage" class="page">
+<div class="up-inner">
+  <div class="up-hd">
+    <div class="chk-c"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="up-title">تمام! ارفع صورك دلوقتي</div>
+    <div class="up-sub">اختار طريقة الرفع</div>
+  </div>
+
+  <div id="upForm">
+    <div class="cam-tabs">
+      <button class="ctab on" id="tabG" onclick="switchMode('gallery')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+        من الاستوديو
+      </button>
+      <button class="ctab" id="tabC" onclick="switchMode('camera')">
+        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        من الكاميرا
+      </button>
+    </div>
+
+    <div id="galleryArea">
+      <div class="dz" id="dz">
+        <input type="file" id="fileIn" accept="image/*" multiple onchange="handleFiles(this.files)">
+        <div class="dz-ico">🖼️</div>
+        <div class="dz-t">اسحب الصور هنا أو اضغط للاختيار</div>
+        <div class="dz-s">يمكنك اختيار أكثر من صورة</div>
+      </div>
+    </div>
+
+    <div id="cameraArea">
+      <div class="cam-preview-wrap">
+        <video id="camVid" autoplay playsinline muted></video>
+        <canvas id="camCvs" style="display:none;"></canvas>
+      </div>
+      <div class="cam-btns">
+        <button class="cam-snap" onclick="snapPhoto()">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+          التقاط صورة
+        </button>
+        <button class="cam-stop" onclick="stopCamera()">إيقاف</button>
+      </div>
+    </div>
+
+    <div class="prev-grid" id="prevGrid" style="margin-top:12px;"></div>
+
+    <div id="extraFields" style="display:none;">
+      <label class="name-lbl">اسمك</label>
+      <input type="text" id="senderIn" placeholder="اكتب اسمك...">
+      <label class="cap-lbl">تعليق (اختياري)</label>
+      <textarea id="capIn" placeholder="اكتب تعليق على صورك..."></textarea>
+    </div>
+
+    <div class="prog" id="prog">
+      <div class="prog-bg"><div class="prog-fill" id="pFill"></div></div>
+      <div class="prog-txt" id="pTxt">جاري الإرسال...</div>
+    </div>
+
+    <button class="btn-send" id="sendBtn" onclick="sendPhotos()" disabled>
+      <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      إرسال الصور
+    </button>
+  </div>
+
+  <div class="success" id="suc">
+    <div class="big-chk">✅</div>
+    <div class="suc-t">وصلت الصور لصاحبك!</div>
+    <div class="suc-s">تم الإرسال بنجاح 🎉</div>
+    <button class="btn-more" onclick="resetUp()">إرسال المزيد</button>
+  </div>
+</div>
+</div>
+
+<!-- Lightbox -->
+<div class="lb" id="lb" onclick="closeLb()">
+  <button class="lb-x" onclick="closeLb()">✕</button>
+  <img id="lbImg" src="" alt="">
+  <div class="lb-info">
+    <div class="lb-name" id="lbName"></div>
+    <div class="lb-t" id="lbT"></div>
+    <div class="lb-cap" id="lbCap"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API     = '/api/photos';
+const QP      = new URLSearchParams(location.search);
+const SHARE   = QP.get('share'); // friend's token (owner's token)
+
+const MY_TOKEN = (() => {
+  let t = localStorage.getItem('ss_tok');
+  if (!t) { t = Math.random().toString(36).slice(2,9).toUpperCase(); localStorage.setItem('ss_tok',t); }
+  return t;
+})();
+
+// ── ROUTING ──
+(function route() {
+  if (SHARE) {
+    show('friendPage');
+  } else {
+    show('dashPage');
+    initDash();
+  }
+})();
+
+function show(id) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ══════════════════════════════
+//  DASHBOARD
+// ══════════════════════════════
+const FULL_URL = () => `${location.origin}${location.pathname}?share=${MY_TOKEN}`;
+
+function initDash() {
+  const url = FULL_URL();
+  document.getElementById('lbUrl').textContent     = url;
+  document.getElementById('tokenPill').textContent = MY_TOKEN;
+  document.getElementById('manualUrl').value        = url;
+  loadPhotos();
+  setInterval(loadPhotos, 5000);
+}
+
+function copyLink() {
+  const url = FULL_URL();
+  const btn = document.getElementById('copyBtn');
+  const txt = document.getElementById('copyTxt');
+  const manual = document.getElementById('manualCopy');
+
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        txt.textContent='✓ تم النسخ!'; btn.classList.add('ok');
+        setTimeout(()=>{ txt.textContent='نسخ اللينك'; btn.classList.remove('ok'); }, 2500);
+        toast('✓ تم نسخ اللينك');
+      })
+      .catch(()=>showManual(url, manual));
+  } else {
+    showManual(url, manual);
+  }
+}
+
+function showManual(url, manual) {
+  manual.style.display='block';
+  const inp = document.getElementById('manualUrl');
+  inp.value=url; inp.focus(); inp.select();
+  try { document.execCommand('copy'); toast('✓ تم النسخ!'); }
+  catch(e) { toast('📋 اضغط على الخانة واختر نسخ'); }
+}
+
+let curFilter='all';
+let allPhotos=[];
+
+function setFilter(f,btn) {
+  curFilter=f;
+  document.querySelectorAll('.ft').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderPhotos();
+}
+
+async function loadPhotos() {
+  try {
+    const res = await fetch(`${API}?token=${MY_TOKEN}`);
+    const data = await res.json();
+    if (data.photos) { allPhotos=data.photos; renderPhotos(); }
+  } catch(e) { console.error(e); }
+}
+
+function renderPhotos() {
+  const today = new Date().toDateString();
+  let photos = allPhotos;
+  if (curFilter==='today') photos=photos.filter(p=>new Date(p.created_at).toDateString()===today);
+  if (curFilter==='new')   photos=photos.filter(p=>!p.seen);
+
+  const senders = [...new Set(allPhotos.map(p=>p.sender))].length;
+  const todayC  = allPhotos.filter(p=>new Date(p.created_at).toDateString()===today).length;
+  document.getElementById('stP').textContent = allPhotos.length;
+  document.getElementById('stF').textContent = senders;
+  document.getElementById('stT').textContent = todayC;
+
+  const grid=document.getElementById('pgrid');
+  if (!photos.length) {
+    grid.innerHTML=`<div class="empty">
+      <div class="empty-ico">📭</div>
+      <div class="empty-t">${curFilter==='all'?'لا توجد صور بعد':curFilter==='today'?'لا صور اليوم':'لا صور جديدة'}</div>
+      <div class="empty-s">ابعت اللينك لصاحبك وانتظر</div>
+    </div>`; return;
+  }
+
+  // Mark seen via API (fire and forget)
+  fetch(`${API}?token=${MY_TOKEN}`, {method:'PATCH'}).catch(()=>{});
+
+  const reversed=[...photos].reverse();
+  grid.innerHTML=reversed.map((p,i)=>`
+    <div class="pc" onclick="openLb(${i})" style="animation-delay:${i*0.04}s">
+      <img src="${p.data}" loading="lazy" alt="">
+      <div class="pc-badge">${fmtTime(p.created_at)}</div>
+      ${!p.seen?'<div class="pc-new">جديد</div>':''}
+      <div class="pc-info">
+        <div class="pc-name">${esc(p.sender)}</div>
+        <div class="pc-time">${fmtDate(p.created_at)}</div>
+        ${p.caption?`<div class="pc-cap">${esc(p.caption)}</div>`:''}
+      </div>
+    </div>`).join('');
+}
+
+function openLb(i) {
+  const reversed=[...allPhotos].reverse();
+  const p=reversed[i]; if(!p) return;
+  document.getElementById('lbImg').src=p.data;
+  document.getElementById('lbName').textContent=p.sender;
+  document.getElementById('lbT').textContent=fmtDate(p.created_at);
+  document.getElementById('lbCap').textContent=p.caption||'';
+  document.getElementById('lb').classList.add('open');
+}
+function closeLb(){ document.getElementById('lb').classList.remove('open'); }
+
+async function clearAll() {
+  if (!confirm('مسح كل الصور نهائياً؟')) return;
+  // For simplicity: just clear local view (real delete needs extra API endpoint)
+  allPhotos=[]; renderPhotos();
+  toast('تم المسح من العرض');
+}
+
+// ══════════════════════════════
+//  CONSENT
+// ══════════════════════════════
+function agree() { show('uploadPage'); }
+function decline() {
+  document.querySelector('.cc').innerHTML=`
+    <div style="padding:60px 26px;text-align:center">
+      <div style="font-size:48px;margin-bottom:14px">🙅</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:7px">تمام، مش مشكلة</div>
+      <div style="font-size:13px;color:var(--text2)">لم يتم مشاركة أي بيانات</div>
+    </div>`;
+}
+
+// ══════════════════════════════
+//  UPLOAD
+// ══════════════════════════════
+let selFiles=[], camStream=null;
+
+// Drag & drop
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleFiles(e.dataTransfer.files);});
+
+function handleFiles(files) {
+  const arr=Array.from(files).filter(f=>f.type.startsWith('image/'));
+  if(!arr.length){toast('⚠ اختار صور فقط');return;}
+  selFiles=[...selFiles,...arr].slice(0,12);
+  renderPrev();
+}
+
+function renderPrev() {
+  const g=document.getElementById('prevGrid');
+  const ex=document.getElementById('extraFields');
+  const btn=document.getElementById('sendBtn');
+  if(!selFiles.length){g.innerHTML='';ex.style.display='none';btn.disabled=true;return;}
+  ex.style.display='block'; btn.disabled=false;
+  Promise.all(selFiles.map(readFile)).then(srcs=>{
+    g.innerHTML=srcs.map((s,i)=>`
+      <div class="pi">
+        <img src="${s}">
+        <button class="pi-rm" onclick="rmFile(${i})">✕</button>
+        <div class="pi-n">${i+1}</div>
+      </div>`).join('');
+  });
+}
+function rmFile(i){selFiles.splice(i,1);renderPrev();}
+function readFile(f){return new Promise(r=>{const fr=new FileReader();fr.onload=e=>r(e.target.result);fr.readAsDataURL(f);});}
+
+function switchMode(m) {
+  document.getElementById('tabG').classList.toggle('on',m==='gallery');
+  document.getElementById('tabC').classList.toggle('on',m==='camera');
+  document.getElementById('galleryArea').style.display=m==='gallery'?'block':'none';
+  document.getElementById('cameraArea').style.display=m==='camera'?'block':'none';
+  if(m==='camera') startCam(); else stopCamera();
+}
+
+async function startCam() {
+  try {
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    document.getElementById('camVid').srcObject=camStream;
+  } catch(e){toast('⚠ مش قادر يفتح الكاميرا');switchMode('gallery');}
+}
+function stopCamera(){if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}document.getElementById('camVid').srcObject=null;}
+
+function snapPhoto() {
+  const v=document.getElementById('camVid'), c=document.getElementById('camCvs');
+  c.width=v.videoWidth; c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  c.toBlob(blob=>{
+    if(!blob)return;
+    const f=new File([blob],'snap_'+Date.now()+'.jpg',{type:'image/jpeg'});
+    selFiles=[...selFiles,f].slice(0,12); renderPrev();
+    toast('✓ تم التقاط الصورة');
+  },'image/jpeg',.9);
+}
+
+async function sendPhotos() {
+  if(!selFiles.length){toast('⚠ اختار صورة أولاً');return;}
+  const sender=(document.getElementById('senderIn').value.trim())||'مجهول';
+  const caption=document.getElementById('capIn').value.trim();
+
+  const prog=document.getElementById('prog');
+  const pFill=document.getElementById('pFill');
+  const pTxt=document.getElementById('pTxt');
+  const btn=document.getElementById('sendBtn');
+  prog.style.display='block'; btn.disabled=true;
+
+  // Read all files
+  const imgs=[];
+  for(let i=0;i<selFiles.length;i++){
+    pFill.style.width=Math.round((i/selFiles.length)*100)+'%';
+    pTxt.textContent=`جاري تحضير الصورة ${i+1} من ${selFiles.length}...`;
+    imgs.push(await readFile(selFiles[i]));
+    await delay(100);
+  }
+
+  pFill.style.width='90%'; pTxt.textContent='جاري الإرسال للسيرفر...';
+
+  try {
+    const res=await fetch(API,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:SHARE, sender, caption, photos:imgs})
+    });
+    const data=await res.json();
+    if(data.ok){
+      pFill.style.width='100%'; pTxt.textContent='تم! 🎉';
+      await delay(400);
+      prog.style.display='none';
+      document.getElementById('upForm').style.display='none';
+      document.getElementById('suc').style.display='block';
+      stopCamera();
+    } else {
+      throw new Error(data.error||'خطأ');
+    }
+  } catch(e) {
+    prog.style.display='none'; btn.disabled=false;
+    toast('⚠ فشل الإرسال: '+e.message);
+  }
+}
+
+function resetUp(){
+  selFiles=[];
+  document.getElementById('prevGrid').innerHTML='';
+  document.getElementById('extraFields').style.display='none';
+  document.getElementById('senderIn').value='';
+  document.getElementById('capIn').value='';
+  document.getElementById('sendBtn').disabled=true;
+  document.getElementById('upForm').style.display='block';
+  document.getElementById('suc').style.display='none';
+  switchMode('gallery');
+}
+
+// ── utils ──
+function delay(ms){return new Promise(r=>setTimeout(r,ms));}
+function fmtTime(ts){return new Date(ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});}
+function fmtDate(ts){
+  const d=new Date(ts),n=new Date();
+  if(d.toDateString()===n.toDateString()) return 'اليوم '+fmtTime(ts);
+  if(Math.floor((n-d)/86400000)===1) return 'أمس '+fmtTime(ts);
+  return d.toLocaleDateString('ar-EG',{day:'numeric',month:'short'})+' '+fmtTime(ts);
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3500);}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb();});
+</script>
+</body>
+</html>
